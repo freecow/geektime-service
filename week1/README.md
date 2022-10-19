@@ -5,7 +5,7 @@
 3. 熟练使用Docker数据卷
 4. 熟练使用Docker的bridge和container模式网络
 
-### 1. 梳理各 Namespace 的作用
+## 1. 梳理各 Namespace 的作用
 
 MNT Namespace实现不同容器的文件系统隔离
 
@@ -15,9 +15,11 @@ UTS Namespace实现主机名隔离
 
 PID Namespace实现进程PID隔离
 
-Net Namespace实现不同容器间的网络隔离，User Namespace实现用户隔离
+Net Namespace实现不同容器间的网络隔离
 
-### 2. 使用apt/二进制安装指定版本的Docker
+User Namespace实现用户隔离
+
+## 2. 使用apt/二进制安装指定版本的Docker
 
 二进制安装方式
 
@@ -60,7 +62,7 @@ apt install docker-ce=5:20.10.17~3-0~ubuntu-jammy docker-ce-cli=5:20.10.17~3-0~u
 
 ![image-20221019150831003](assets/image-20221019150831003.png)
 
-### 3. 熟练使用Docker数据卷
+## 3. 熟练使用Docker数据卷
 
 国内镜像加速
 
@@ -155,7 +157,7 @@ ll /data/mysql
 
 ![image-20221019161820849](assets/image-20221019161820849.png)
 
-### 4. 熟练使用Docker的bridge和container模式网络
+## 4. 熟练使用Docker的bridge和container模式网络
 
 使用bridge网络
 
