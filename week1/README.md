@@ -155,7 +155,7 @@ ll /data/mysql
 
 ![image-20221019161820849](assets/image-20221019161820849.png)
 
-### 3. 熟练使用Docker的bridge和container模式网络
+### 4. 熟练使用Docker的bridge和container模式网络
 
 使用bridge网络
 
