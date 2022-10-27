@@ -317,7 +317,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart containerd
 ```
 
-### 5. 基于nerdctl拉取镜像和创建容器（扩展作业）
+## 5. 基于nerdctl拉取镜像和创建容器（扩展作业）
 
 安装nerdctl
 
