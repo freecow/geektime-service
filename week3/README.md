@@ -628,3 +628,49 @@ git push
 浏览web服务器`http://172.16.17.1`是否主页已变更
 
 ![image-20221110093347680](assets/image-20221110093347680.png)
+
+
+
+## 附 Sonarqube以容器化方式运行
+
+```bash
+# docker-compose.yml
+version: "3"
+services:
+    db:
+        image: postgres
+        container_name: db
+        restart: always
+        privileged: true
+        ports:
+            - 5432:5432
+        networks:
+            - sonarnet
+        environment:
+            POSTGRES_USER: sonar
+            POSTGRES_PASSWORD: sonar
+        volumes:
+            - /opt/postgresql:/var/lib/postgresql
+    sonarqube:
+        image: sonarqube:8.9.3-community
+        container_name: sonarqube
+        restart: always
+        privileged: true
+        depends_on:
+            - db
+        ports:
+            - "9000:9000"
+        networks:
+            - sonarnet
+        environment:
+            SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+            SONAR_JDBC_USERNAME: sonar
+            SONAR_JDBC_PASSWORD: sonar
+        volumes:
+            - /opt/sonarqube/data:/opt/sonarqube/data
+            - /opt/sonarqube/extensions:/opt/sonarqube/extensions
+            - /opt/sonarqube/logs:/opt/sonarqube/logs
+networks:
+    sonarnet:
+        driver: bridge
+```
