@@ -1402,9 +1402,9 @@ cat blog-nginx_access.log >> /apps/nginx/logs/access.log
 
 访问`http://172.16.17.11:5601`，选择Stack Management-->数据视图-->创建数据视图，名称为logstash-develop-app1-accesslog，索引模式为logstash-develop-app1-accesslog-*，时间戳字段为@timestamp，点击保存
 
-选择visualize library-->新建可视化-->Maps-->添加图层-->文档，选择数据视图logstash-develop-app1-accesslog，出现地理空间字段geoip.location，在日历上选择今日，添加图层-->保存并关闭
+选择visualize library-->新建可视化-->Maps-->添加图层-->文档，选择数据视图logstash-develop-app1-accesslog，出现地理空间字段geoip.location，在日历上选择今日，添加图层-->保存并关闭，命名为map-logstash-develop
 
-![image-20221204092606571](assets/image-20221204092606571.png)
+![image-20221204093203530](assets/image-20221204093203530.png)
 
 
 
