@@ -782,8 +782,9 @@ df -TH
 vim ceph.conf
 
 # 在global字段下添加
-mon clock drift allowed = 2
-mon clock drift warn backoff = 30
+mon clock drift allowed = 1
+mon clock drift warn backoff = 10
+mon timecheck interval = 5
 
 # 推送配置文件
 ceph-deploy --overwrite-conf config push ceph-mon{1,2,3}
