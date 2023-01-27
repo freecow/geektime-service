@@ -34,7 +34,7 @@
 
 bucket需要被授权才能访问到，一个帐户可以对多个bucket授权，而权限可以不同，有读、写、读写、全部控制权限
 
-### 使用场景
+### 1.2 使用场景
 
 
 对象存储只能通过Object ID来检索，无法通过普通文件系统的挂载方式来直接访问，只能通过 API 来访问，更多适用于开发场景
@@ -62,7 +62,7 @@ bucket需要被授权才能访问到，一个帐户可以对多个bucket授权�
 172.16.17.1
 ```
 
-### 安装radosgw
+### 2.2 安装radosgw
 
 ```bash
 # ceph-mgr1节点
@@ -116,7 +116,7 @@ ceph osd pool get default.rgw.log pg_num
 
 ![image-20230125172658754](assets/image-20230125172658754.png)
 
-### 修改默认的radosgw端口
+### 2.3 修改默认的radosgw端口
 
 ```bash
 # ceph-deploy节点
@@ -352,7 +352,7 @@ https://rgw.igalaxycn.com
 
 ## 3. 基于s3cmd实现bucket的管理及数据的上传和下载
 
-### 修改rgw配置
+### 3.1 修改rgw配置
 
 ```bash
 # mgr1和mgr2节点
@@ -388,7 +388,7 @@ radosgw-admin user create --uid=”user1” --display-name="user1"
 "secret_key": "vi7ar6ZWeJDw1ZnBqNxowWMs7eyRLfU5Xt5KWlOg"
 ```
 
-### 安装s3cmd客户端
+### 3.3 安装s3cmd客户端
 
 ```bash
 # ceph-deploy节点
@@ -400,7 +400,7 @@ s3cmd --help
 telnet rgw.igalaxycn.com 80
 ```
 
-### 配置命令执行环境
+### 3.4 配置命令执行环境
 
 ```bash
 sudo su - root
@@ -495,7 +495,7 @@ http://172.16.17.14:9900/images/fl1-2.jpg
 
 ## 4. 基于Nginx+RGW的动静分离及短视频案例
 
-### 节点
+### 4.1 节点
 
 ```bash
 # mgr1
@@ -550,7 +550,7 @@ http://rgw.igalaxycn.com/videos/netease2022.mp4
 
 
 
-### 安装nginx
+### 4.3 安装nginx
 
 ```bash
 # ubuntu节点
@@ -625,7 +625,7 @@ tail -f /apps/nginx/logs/*.log
 
 ![image-20230127083708933](assets/image-20230127083708933.png)
 
-### 部署java服务
+### 4.4 部署java服务
 
 ```bash
 # centos节点
@@ -723,7 +723,7 @@ http://rgw2.igalaxycn.com/app1/index.jsp
 172.16.17.19
 ```
 
-### 安装dashboard
+### 5.2 安装dashboard
 
 ```bash
 # ceph-mgr1节点
@@ -802,7 +802,9 @@ http://172.16.17.14:9090
 
 ![image-20230127101430470](assets/image-20230127101430470.png)
 
-### 部署node_exporter
+
+
+### 5.4 部署node_exporter
 
 ```bash
 # 各node节点安装
@@ -825,7 +827,9 @@ http://172.16.17.19:9100
 
 ![image-20230127103422569](assets/image-20230127103422569.png)
 
-### 配置prometheus server数据
+
+
+### 5.5 配置prometheus server数据
 
 ```bash
 # ceph-deploy节点
@@ -877,6 +881,8 @@ http://172.16.17.14:9090
 ```
 
 ![image-20230127104640166](assets/image-20230127104640166.png)
+
+
 
 ### 5.6 安装grafana
 
@@ -1286,6 +1292,8 @@ ceph osd crush rule dump
 ```
 
 ![image-20230127155300314](assets/image-20230127155300314.png)
+
+
 
 ### 6.6 创建不同类别的存储池
 
