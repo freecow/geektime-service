@@ -546,8 +546,6 @@ s3cmd setpolicy videos-single_policy s3://videos
 http://rgw.igalaxycn.com/videos/netease2022.mp4
 ```
 
-![image-20230126221345241](assets/image-20230126221345241.png)
-
 
 
 ### 4.3 安装nginx
@@ -623,7 +621,7 @@ http://rgw2.igalaxycn.com/videos/netease2022.mp4
 tail -f /apps/nginx/logs/*.log
 ```
 
-![image-20230127083708933](assets/image-20230127083708933.png)
+
 
 ### 4.4 部署java服务
 
