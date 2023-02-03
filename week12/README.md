@@ -1,7 +1,5 @@
 # 极客时间运维进阶训练营第十二周作业
 
-
-
 ## 作业要求
 
 1、使用 kubeadm 部署一个分布式的 Kubernetes 集群。
@@ -324,8 +322,6 @@ kubectl api-versions
 kubectl api-resources --api-group=apps
 ```
 
-
-
 ## 2. 扩展作业：使用 kubeasz 部署一个分布式的 Kubernetes 集群
 
 ### 节点规划
@@ -401,7 +397,7 @@ ssh-copy-id 172.16.17.36
 curl -O https://bootstrap.pypa.io/pip/2.7/get-pip.py
 python3 get-pip.py
 python3 -m pip install --upgrade "pip < 21.0"
- 
+
 # pip安装ansible
 pip install ansible -i https://mirrors.aliyun.com/pypi/simple/
 ```
@@ -604,8 +600,6 @@ curl 10.96.217.131
 
 ![image-20230123163757062](assets/image-20230123163757062.png)
 
-
-
 ## 4. 要求以配置文件的方式，在集群上编排运行 nginx，并使用 Service 完成 Pod 发现和服务发布
 
 ### 编排nginx
@@ -710,11 +704,7 @@ kubectl logs nginx-86788d7c5b-97m79
 
 ![image-20230123165919377](assets/image-20230123165919377.png)
 
-
-
 ![image-20230123165954391](assets/image-20230123165954391.png)
-
-
 
 ### pod扩容
 
@@ -736,8 +726,6 @@ kubectl get pods
 ```
 
 ![image-20230123170250792](assets/image-20230123170250792.png)
-
-
 
 ## 5. 扩展作业：要求以配置文件的方式，在集群上编排运行 wordpress 和 mysql，并使用 Service 完成 Pod 发现和服务发布
 
@@ -887,19 +875,11 @@ http://172.16.17.21:32689
 
 ![image-20230123222840816](assets/image-20230123222840816.png)
 
-
-
 ![image-20230123222908113](assets/image-20230123222908113.png)
-
-
 
 ![image-20230124051031560](assets/image-20230124051031560.png)
 
-
-
 ![image-20230124051305834](assets/image-20230124051305834.png)
-
-
 
 ## Q&A
 
