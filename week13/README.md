@@ -73,7 +73,7 @@ spec:
 kubectl apply -f demoapp.yaml
 ```
 
-### 测试
+### 1.2 测试
 
 ```bash
 # 查看pod
@@ -113,7 +113,9 @@ http://172.16.17.21:30463/
 
 - wordpress和mysql的数据要保存于PVC上
 
-### 部署NFS服务
+
+
+### 2.1 部署NFS服务
 
 ```bash
 # 节点172.16.17.41
@@ -334,7 +336,9 @@ kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP    19d
 mysql        ClusterIP   10.111.226.67   <none>        3306/TCP   3m57s
 ```
 
-### 创建wordpress
+
+
+### 2.3 创建wordpress
 
 ```bash
 # 创建pv
@@ -616,7 +620,7 @@ http://172.16.17.24:30707
 
 ## 3. 扩展作业：pvc依赖的pv要动态置备
 
-### k8s集群部署NFS服务
+### 3.1 k8s集群部署NFS服务
 
 ```bash
 # 创建目录
@@ -1026,7 +1030,7 @@ kube-root-ca.crt   1      19d
 nginx-conf         1      6s
 ```
 
-### 创建nginx
+### 3.7 创建nginx
 
 ```bash
 # 创建service
