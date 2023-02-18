@@ -77,12 +77,8 @@ mountOptions:
 kubectl apply -f nfs-csi-storageclass.yaml
 kubectl get sc
 
-============>>out
-...
 NAME      PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
 nfs-csi   nfs.csi.k8s.io   Delete          Immediate           false                  10s
-============>>end
-
 ```
 
 #### 部署mysql
@@ -526,7 +522,6 @@ kubectl apply -f mysql-cluster.yaml
 # 持续检查资源创建情况，直至全部online
 kubectl get innodbcluster --watch
 
-============>>out
 NAME            STATUS    ONLINE   INSTANCES   ROUTERS   AGE
 mysql-cluster   PENDING   0        3           1         6s
 mysql-cluster   PENDING   0        3           1         3m5s
@@ -540,7 +535,6 @@ mysql-cluster   ONLINE_PARTIAL   1        3           1         3m37s
 mysql-cluster   ONLINE_PARTIAL   2        3           1         3m43s
 mysql-cluster   ONLINE           2        3           1         4m8s
 mysql-cluster   ONLINE           3        3           1         4m15s
-============>>end
 
 
 # 连接mysql
@@ -889,7 +883,6 @@ start slave;
 # 查看从库状态
 show slave status\G
 
-============>>out
 *************************** 1. row ***************************
                Slave_IO_State: Waiting for source to send event
                   Master_Host: 172.16.17.3
@@ -898,8 +891,6 @@ show slave status\G
                 Connect_Retry: 60
               Master_Log_File: mysql-bin.000003
           Read_Master_Log_Pos: 1356
-...
-============>>end
 
 
 
