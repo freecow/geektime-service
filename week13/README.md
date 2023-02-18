@@ -1129,6 +1129,7 @@ http://172.16.17.24:32757
 kubectl create deployment demoapp --image=ikubernetes/demoapp:v1.0 --replicas=3
 
 # 创建Service
+# externalTrafficPolicy为Local表示接收到外部流量后直接转发给本节点
 vim demoapp-service-nodeport.yaml
 
 apiVersion: v1
