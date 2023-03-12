@@ -161,7 +161,7 @@ systemctl daemon-reload && sudo systemctl restart docker
 docker info
 ```
 
-各节点安装cri-dockerd
+### 2.3 各节点安装cri-dockerd
 
 ```bash
 # 下载二进制安装包
@@ -229,7 +229,7 @@ systemctl daemon-reload && systemctl restart cri-docker && systemctl enable cri-
 systemctl status cri-docker
 ```
 
-各节点安装kubeadm
+### 2.4 各节点安装kubeadm
 
 ```bash
 # 安装依赖包
@@ -258,7 +258,7 @@ kubeadm version
 kubeadm version: &version.Info{Major:"1", Minor:"24", GitVersion:"v1.24.10", GitCommit:"5c1d2d4295f9b4eb12bfbf6429fdf989f2ca8a02", GitTreeState:"clean", BuildDate:"2023-01-18T19:13:52Z", GoVersion:"go1.19.5", Compiler:"gc", Platform:"linux/amd64"}
 ```
 
-初始化集群
+### 2.5 初始化集群
 
 ```bash
 # 查看依赖镜像
@@ -326,7 +326,7 @@ kubeadm reset --cri-socket unix:///run/cri-dockerd.sock && rm -rf /etc/kubernete
 docker rm -f $(docker ps -aq)
 ```
 
-安装helm
+### 2.6 安装helm
 
 ```bash
 # master1节点
@@ -344,7 +344,7 @@ mv linux-amd64/helm /usr/local/bin/
 helm --help
 ```
 
-部署网络组件hybridnet
+### 2.7 部署网络组件hybridnet
 
 ```bash
 # master1节点
@@ -378,7 +378,7 @@ kubectl get pod -A
 
 ![image-20230311233929999](assets/image-20230311233929999.png)
 
-创建underlay网络并与node节点关联
+### 2.8 创建underlay网络并与node节点关联
 
 ```bash
 # master节点
@@ -410,7 +410,7 @@ kubectl get network
 
 ![image-20230311234612707](assets/image-20230311234612707.png)
 
-创建pod并使用overlay网络
+### 2.9 创建pod并使用overlay网络
 
 ```bash
 # 创建namaspace
@@ -451,7 +451,7 @@ ping baidu.com
 
 
 
-创建pod并使用underlay网络
+### 2.10 创建pod并使用underlay网络
 
 ```bash
 # 修改pod配置
