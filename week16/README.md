@@ -650,6 +650,8 @@ UDP 目的端口：8472
 | haproxy1 | 172.16.17.40 | ha1         |               |
 | harbor   | 172.16.17.42 | harbor      |               |
 | client   | 172.16.17.43 | client1     |               |
+| nfs      | 172.16.17.41 | nfs         |               |
+| haproxy2 | 172.16.17.50 | ha2         |               |
 
 ### 5.2 安装harbor
 
@@ -781,18 +783,18 @@ global_defs {
 }
 
 vrrp_instance VI_1 {
-    state MASTER
-    interface ens160
+    state MASTER  #master表示主服务器
+    interface ens160 #承载vip地址的物理接口
     garp_master_delay 10
     smtp_alert
-    virtual_router_id 51
-    priority 100
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
+    virtual_router_id 51 #虚拟路由器ID号，每个热备组一致
+    priority 100 #优先级，数值越大优先级越高
+    advert_int 1 #心跳频率
+    authentication { #认证信息，每个热备组一致
+        auth_type PASS #认证类型
+        auth_pass 1111 #密码
     }
-    virtual_ipaddress {
+    virtual_ipaddress { #vip漂移地址，可以是多个
         172.16.17.188 dev ens160 label ens160:0
         172.16.17.189 dev ens160 label ens160:1
         172.16.17.190 dev ens160 label ens160:2
@@ -806,9 +808,103 @@ systemctl restart keepalived
 systemctl enable keepalived
 
 # 查看网卡
-ifconfig
-ping 172.16.17.188
+ip a show dev ens160
 
+============>>out
+...
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:50:56:ae:e3:b8 brd ff:ff:ff:ff:ff:ff
+    inet 172.16.17.40/21 brd 172.16.23.255 scope global ens160
+       valid_lft forever preferred_lft forever
+    inet 172.16.17.188/32 scope global ens160:0
+       valid_lft forever preferred_lft forever
+    inet 172.16.17.189/32 scope global ens160:1
+       valid_lft forever preferred_lft forever
+    inet 172.16.17.190/32 scope global ens160:2
+       valid_lft forever preferred_lft forever
+    inet 172.16.17.191/32 scope global ens160:3
+       valid_lft forever preferred_lft forever
+    inet 172.16.17.192/32 scope global ens160:4
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:feae:e3b8/64 scope link 
+       valid_lft forever preferred_lft forever
+============>>end
+
+
+# ha2
+# 安装keepalived和haproxy
+apt update
+apt install keepalived haproxy -y
+
+# 修改配置文件
+cp /usr/share/doc/keepalived/samples/keepalived.conf.vrrp /etc/keepalived/keepalived.conf
+
+# 修改配置文件
+# 与实际网卡对应，把不需要的vrrp接口删掉
+vim /etc/keepalived/keepalived.conf
+
+! Configuration File for keepalived
+
+global_defs {
+   notification_email {
+     acassen
+   }
+   notification_email_from Alexandre.Cassen@firewall.loc
+   smtp_server 192.168.200.1
+   smtp_connect_timeout 30
+   router_id LVS_DEVEL
+}
+
+vrrp_instance VI_1 {
+    state BACKUP  #master表示主服务器
+    interface ens160 #承载vip地址的物理接口
+    garp_master_delay 10
+    smtp_alert
+    virtual_router_id 51 #虚拟路由器ID号，每个热备组一致
+    priority 90 #优先级，数值越大优先级越高
+    advert_int 1 #心跳频率
+    authentication { #认证信息，每个热备组一致
+        auth_type PASS #认证类型
+        auth_pass 1111 #密码
+    }
+    virtual_ipaddress { #vip漂移地址，可以是多个
+        172.16.17.188 dev ens160 label ens160:0
+        172.16.17.189 dev ens160 label ens160:1
+        172.16.17.190 dev ens160 label ens160:2
+        172.16.17.191 dev ens160 label ens160:3
+        172.16.17.192 dev ens160 label ens160:4
+    }
+}
+
+# 重启keepalived
+systemctl restart keepalived
+systemctl enable keepalived
+
+# 查看网卡
+ip a show dev ens160
+
+============>>out
+...
+2: ens160: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:50:56:ae:6a:05 brd ff:ff:ff:ff:ff:ff
+    inet 172.16.17.50/21 brd 172.16.23.255 scope global ens160
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:feae:6a05/64 scope link 
+       valid_lft forever preferred_lft forever
+============>>end
+
+
+# 测试双机热备功能
+# client1
+# 持续ping vip地址观察中断情况
+ping -t 172.16.17.188
+# ha1
+system stop keepalived
+# ha1
+system start keepalived
+
+
+# ha1和ha2
 # 配置haproxy
 vim /etc/haproxy/haproxy.cfg
 
@@ -817,14 +913,21 @@ listen k8s_api_nodes_6443
     bind 172.16.17.188:6443
     mode tcp
     # 均衡到3个master
-    server 172.16.17.31 172.16.17.31:6443 check inter 2000 fall 3 rise 5
-    server 172.16.17.32 172.16.17.32:6443 check inter 2000 fall 3 rise 5
-    server 172.16.17.33 172.16.17.33:6443 check inter 2000 fall 3 rise 5
+    server k8s-master1 172.16.17.31:6443 check inter 2000 fall 3 rise 5
+    server k8s-master2 172.16.17.32:6443 check inter 2000 fall 3 rise 5
+    server k8s-master3 172.16.17.33:6443 check inter 2000 fall 3 rise 5
+    
+# 开启内核参数，可监听不在本机的地址
+echo net.ipv4.ip_nonlocal_bind = 1 >> /etc/sysctl.conf
+# 内核参数生效
+sysctl -p
+# 查询
+sysctl -a |grep local_bind
 
 # 重启haproxy
 systemctl restart haproxy.service
 systemctl enable haproxy.service
-ystemctl status haproxy.service
+systemctl status haproxy.service
 
 # 检查端口
 ss -tnlp
@@ -883,9 +986,9 @@ ssh 172.16.17.31
 # 下载kubeasz
 export release=3.2.0
 wget https://github.com/easzlab/kubeasz/releases/download/${release}/ezdown
+chmod +x ./ezdown
 
 # 修改脚本
-chmod a+x ezdown
 vim ezdown
 
 DOCKER_VER=20.10.23
@@ -900,7 +1003,15 @@ REGISTRY_MIRROR=CN
 ./ezdown -D
 ll /etc/kubeasz/down/
 
-# 生成ansible hosts文件
+# 下载系统包
+# 可选，当无法使用yum/apt在线安装系统包时使用
+./ezdown -P
+# /etc/kubeasz包含kubeasz版本的发布代码
+# /etc/kubeasz/bin包含kubernetes/etcd/docker/cni等二进制文件
+# /etc/kubeasz/down包含集群安装时需要的离线容器镜像
+# /etc/kubeasz/down/packages包含集群安装时需要的系统基础软件
+
+# 定义集群k8s-01，生成ansible hosts文件
 cd /etc/kubeasz/
 ./ezctl new k8s-01
 
@@ -908,7 +1019,7 @@ cd /etc/kubeasz/
 # 先装2个master、2个node，后面再扩容
 vim /etc/kubeasz/clusters/k8s-01/hosts
 
-# 'etcd' cluster should have odd member(s) (1,3,5,...)
+# etcd
 [etcd]
 172.16.17.37
 172.16.17.38
@@ -924,12 +1035,10 @@ vim /etc/kubeasz/clusters/k8s-01/hosts
 172.16.17.34
 172.16.17.35
 
-# [optional] harbor server, a private docker registry
-# 'NEW_INSTALL': 'true' to install a harbor server; 'false' to integrate with existed one
 [harbor]
 #192.168.1.8 NEW_INSTALL=false
 
-# [optional] loadbalance for accessing k8s from outside
+# loadbalance for accessing k8s from outside
 [ex_lb]
 #192.168.1.6 LB_ROLE=backup EX_APISERVER_VIP=192.168.1.250 EX_APISERVER_PORT=8443
 #192.168.1.7 LB_ROLE=master EX_APISERVER_VIP=192.168.1.250 EX_APISERVER_PORT=8443
@@ -962,7 +1071,7 @@ CLUSTER_CIDR="10.200.0.0/16"
 NODE_PORT_RANGE="30000-60000"
 
 # Cluster DNS Domain
-CLUSTER_DNS_DOMAIN="geniuslab.local"
+CLUSTER_DNS_DOMAIN="cluster.local"
 
 # -------- Additional Variables (don't change the default value right now) ---
 # Binaries Directory
@@ -1157,7 +1266,8 @@ busybox_offline: "busybox_{{ busybox_ver }}.tar"
 # role:cluster-addon
 ############################
 # coredns 自动安装
-dns_install: "no"
+# 手动安装时安装coredns
+dns_install: "yes"
 corednsVer: "1.8.6"
 ENABLE_LOCAL_DNS_CACHE: false
 dnsNodeCacheVer: "1.21.1"
@@ -1252,7 +1362,7 @@ mkdir -pv /etc/docker/certs.d/harbor.igalaxycn.com/
 # 将证书放到任务执行的文件目录中
 scp root@172.16.17.42:/apps/harbor/certs/harbor.igalaxycn.com.crt /etc/kubeasz/roles/docker/files
 
-#scp root@172.16.17.42:/apps/harbor/certs/harbor.igalaxycn.com.crt /etc/docker/certs.d/harbor.igalaxycn.com/
+scp /etc/kubeasz/roles/docker/files/harbor.igalaxycn.com.crt /etc/docker/certs.d/harbor.igalaxycn.com/
 
 # 第三步部署运行时
 ./ezctl setup k8s-01 03
@@ -1268,11 +1378,16 @@ docker push harbor.igalaxycn.com/baseimages/pause:3.9
 # 修改SANDBOX_IMAGE定义的pause镜像地址
 vim clusters/k8s-01/config.yml
 
+############################
+# role:runtime [containerd,docker]
+############################
 # [containerd]基础容器镜像
 SANDBOX_IMAGE: "harbor.igalaxycn.com/baseimages/pause:3.9"
 
 # 第四步部署master节点
 ./ezctl setup k8s-01 04
+
+# 检查master节点情况
 kubectl get node
 
 NAME           STATUS                     ROLES    AGE     VERSION
@@ -1281,6 +1396,8 @@ NAME           STATUS                     ROLES    AGE     VERSION
 
 # 第五步部署node节点
 ./ezctl setup k8s-01 05
+
+# 检查node节点情况
 kubectl get node
 
 NAME           STATUS                     ROLES    AGE     VERSION
@@ -1292,9 +1409,11 @@ NAME           STATUS                     ROLES    AGE     VERSION
 # 第六步部署calico网络服务
 ./ezctl setup k8s-01 06
 
-# 在master或node节点上验证calico
+# 须在master或node节点上验证calico
 calicoctl node status
 
+============>>out
+...
 Calico process is running.
 
 IPv4 BGP status
@@ -1308,6 +1427,8 @@ IPv4 BGP status
 
 IPv6 BGP status
 No IPv6 peers found.
+============>>end
+
 
 # 检查路由
 route -n
@@ -1321,9 +1442,6 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 10.200.224.0    172.16.17.32    255.255.255.192 UG    0      0        0 tunl0
 172.16.16.0     0.0.0.0         255.255.248.0   U     0      0        0 ens160
 172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
-
-
-# 以上集群已安装完毕
 ```
 
 ### 5.6 集群节点伸缩
@@ -1353,50 +1471,84 @@ kubectl get node
 ### 5.7 部署其它组件
 
 ```bash
+# deploy节点
 # 部署coredns
-# 上传coredns-v1.8.6和dashboard-v2.5.1目录至master1节点
+# 检查kubeasz配置
+# 目前kubeasz已经自动集成安装coredns和nodelocaldns组件，参考地址https://github.com/easzlab/kubeasz/blob/master/docs/guide/kubedns.md
+vim /etc/kubeasz/clusters/k8s-01/config.yml
 
-# 在deploy节点检查当前集群域名
-cat /etc/kubeasz/clusters/k8s-01/hosts
+...
+############################
+# role:cluster-addon
+############################
+# coredns 自动安装
+dns_install: "yes"
+corednsVer: "1.8.6"
+ENABLE_LOCAL_DNS_CACHE: false
+dnsNodeCacheVer: "1.21.1"
+# 设置 local dns cache 地址
+LOCAL_DNS_CACHE: "169.254.20.10"
+...
 
-CLUSTER_DNS_DOMAIN="geniuslab.local"
-
-# master1节点
-# 修改coredns配置文件保持域名一致
-cd coredns-v1.8.6/
-vim coredns-1.8.6.yaml
-
-data:
-  Corefile: |
-    .:53 {
-        errors
-        health {
-            lameduck 5s
-        }
-        ready
-        kubernetes geniuslab.local. in-addr.arpa ip6.arpa {
-            pods insecure
-            fallthrough in-addr.arpa ip6.arpa
-            ttl 30
-        }
+# 如需要修改缺省域名cluster.local
+/etc/kubeasz/clusters/k8s-01/yml/coredns.yaml
 
 # 部署coredns
-kubectl apply -f coredns-1.8.6.yaml
+./ezctl setup k8s-01 07
 kubectl get pod -A
 
-NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
-kube-system   calico-kube-controllers-754966f84c-qwpg5   1/1     Running   0          6h27m
-kube-system   calico-node-ggc24                          1/1     Running   0          44m
-kube-system   calico-node-lgk65                          1/1     Running   0          43m
-kube-system   calico-node-mblhj                          1/1     Running   0          43m
-kube-system   calico-node-mczk7                          1/1     Running   0          44m
-kube-system   calico-node-snn2w                          1/1     Running   0          44m
-kube-system   calico-node-xlr46                          1/1     Running   0          39m
-kube-system   coredns-5f8b57cc79-kn5kv                   1/1     Running   0          26m
+# 为避免与其它pod端口冲突
+# 修改nodelocaldns端口从8080变为18080
+vim /etc/kubeasz/clusters/k8s-01/yml/nodelocaldns.yaml
+
+# 第70行
+bind 169.254.20.10
+forward . 10.100.0.2 {
+        force_tcp
+}
+prometheus :9253
+health 169.254.20.10:18080
+}
+# 第164行
+livenessProbe:
+  httpGet:
+    host: 169.254.20.10
+    path: /health
+    port: 18080
+
+# 端口生效
+kubectl apply -f nodelocaldns.yaml
+
+# 测试dns
+# 注：busybox内的nslookup程序有bug
+# 创建nginx pod+svc
+kubectl run nginx --image=nginx --expose --port=80
+kubectl get pod,svc
+
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.100.0.1       <none>        443/TCP   5h28m
+nginx        ClusterIP   10.100.182.214   <none>        80/TCP    34m
+
+# 创建net-test1
+kubectl run net-test1 --image=alpine sleep 10000000
+kubectl exec -it net-test1 sh
+
+/ # cat /etc/resolv.conf
+
+nameserver 169.254.20.10
+search default.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+
+/ # ping kubernetes
+PING kubernetes (10.100.0.1): 56 data bytes
+64 bytes from 10.100.0.1: seq=0 ttl=64 time=0.081 ms
+
+/ # ping nginx
+PING nginx (10.100.182.214): 56 data bytes
+64 bytes from 10.100.182.214: seq=0 ttl=64 time=0.168 ms
 
 
-
-# 部署dashboard
+# 手动部署dashboard
 # 在deploy节点上传镜像到本地harbor
 docker pull kubernetesui/dashboard:v2.5.1
 docker tag kubernetesui/dashboard:v2.5.1 harbor.igalaxycn.com/baseimages/dashboard:v2.5.1
@@ -1411,15 +1563,76 @@ docker push harbor.igalaxycn.com/baseimages/metrics-scraper:v1.0.8
 cd dashboard-v2.5.1/
 vim dashboard-v2.5.1.yaml
 
-- port: 443
-  targetPort: 8443
-  nodePort: 30002 #未来浏览器访问端口
-
-- name: kubernetes-dashboard
-  image: harbor.igalaxycn.com/baseimages/dashboard:v2.5.1
-  
-- name: dashboard-metrics-scraper
-  image: harbor.igalaxycn.com/baseimages/metrics-scraper:v1.0.8
+...
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+spec:
+  type: NodePort
+  ports:
+    - port: 443
+      targetPort: 8443
+      nodePort: 30002 #未来浏览器访问端口
+  selector:
+    k8s-app: kubernetes-dashboard
+...
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    k8s-app: kubernetes-dashboard
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: kubernetes-dashboard
+  template:
+    metadata:
+      labels:
+        k8s-app: kubernetes-dashboard
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: kubernetes-dashboard
+          image: harbor.igalaxycn.com/baseimages/dashboard:v2.5.1
+          imagePullPolicy: Always
+...
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    k8s-app: dashboard-metrics-scraper
+  name: dashboard-metrics-scraper
+  namespace: kubernetes-dashboard
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: dashboard-metrics-scraper
+  template:
+    metadata:
+      labels:
+        k8s-app: dashboard-metrics-scraper
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dashboard-metrics-scraper
+          image: harbor.igalaxycn.com/baseimages/metrics-scraper:v1.0.8  
+...
 
 # 部署dashboard
 kubectl apply -f dashboard-v2.5.1.yaml
@@ -1430,16 +1643,19 @@ kubectl apply -f admin-user.yaml
 
 # 获取其token
 kubectl get secret -n kubernetes-dashboard
-kubectl describe secret admin-user-token-txt28 -n kubernetes-dashboard
+kubectl describe secret admin-user-token-nr9mk -n kubernetes-dashboard
 
 ============>>out
 ...
-token:      eyJhbGciOiJSUzI1NiIsImtpZCI6ImdtRDM3TU9HdmxqT00zZEsyN3lBc2ZqWTZDY014N0h1Z0xYQ3RHTXBYaWMifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLXR4dDI4Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiIzNWE4OTFlYi04MjI3LTQ5YjUtYmNkMy1iMzA1OTI5ZGNlMmQiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.rM-6YvSh6UGEbChVzswAn4_sIc5Gn056e-2STlGRUtejEA1K242PwQ6Ryay0EPw9qtLFJxG4KHBvxTewZDIOSJkRlCA1XhlDaAgCMnHQ3hACJTEzUH8j3PYPg9NygviwwJ4LnbunjcuJC8KCOu4nCi0mqPUKBkyHgAoK_oWTJZBpM6N17mwRF99YqSgkEIBoC3-J4QfQu3Jkvm3BXwDz4thVL1JibaV22y9XpCeZMgfnf-ymdpcnyj8WkA0gD2IP2MVJUl94oleOnedE1A5y4AAmbSnnlP__PcBFoCg4wy4PN22NMpNpYv3PioFszA9EadkQShB-bTMWh1x96puckg
+token:      eyJhbGciOiJSUzI1NiIsImtpZCI6IjJ6Z2x0OXd6OEpVUFdSci04d2lraFQwMTcyamJ3Q082bmZiNWEteXZpRmMifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyLXRva2VuLW5yOW1rIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiJlMjkxMTRkNy1jZTJjLTQ1NzItOTkwMC04MzkyOWUwNzBhMzkiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.R2_8gLMoXqAFVZOhpBI00Nfbf_IfqEba2lVjyovLA0_scA_c-a5ikj8FIXmqZQZeMe1Dge6Xbzj5ptbmDuotCuAWYZ8rHgiY9qkKnWSnPneRpk8pKKWrpsseom3BvnlVldsxI7jVSqwda3gqNlIBnRIJI7OlXf9CUbYnv7W-Kvchy8O_X66YozBkIhXIzP5HVqNrfkiI6lodFlsVEvc19erLALnGmhXyrhpVRfsj-OFJzoheatSTGMYZ3lHEBreueo9eBe4zJ-AMDHdEmGXbdewyYQiy95egyAUd1JJ8f1WZLXBi_qu0W5Qd682tR5pq4P0B0oYLZdU4QC7cvy4WWQ
 ============>>end
 
 # 访问任意node节点dashboard
 https://172.16.17.34:30002
-选择Token方式，粘贴进入上面的Token，点击登录
+
+# 选择Token方式
+# 粘贴进入上面的Token
+# 点击登录
 
 # master1节点测试
 kubectl run net-test1 --image=alpine sleep 10000000
@@ -1461,8 +1677,8 @@ kubectl exec -it net-test1 sh
 ping www.baidu.com
 
 # ping其它pod
-ping 10.200.169.130
-ping 10.200.107.195
+ping 10.200.107.194
+ping 10.200.36.67
 ```
 
 ![image-20230312173454111](assets/image-20230312173454111.png)
@@ -1470,3 +1686,55 @@ ping 10.200.107.195
 
 
 ![image-20230312174322512](assets/image-20230312174322512.png)
+
+
+
+## 6. Q&A
+
+### 6.1 如何删除集群
+
+```bash
+# 清理集群
+# ezctl destroy <cluster>
+ezctl destroy k8s-01
+rm -rf /etc/kubeasz/clusters/k8s-01/
+
+# 移除kubeasz容器
+./ezdown -C
+
+# 如需删除容器
+# 清理容器镜像
+docker system prune -a
+
+# 停止docker服务
+systemctl stop docker
+
+# 删除docker文件
+umount /var/run/docker/netns/default
+umount /var/lib/docker/overlay
+rm -rf /var/lib/docker /var/run/docker
+
+# 重启节点，以确保清理残留的虚拟网卡、路由等信息
+```
+
+### 6.2 如何备份与恢复集群
+
+```bash
+# 创建测试Deployment
+kubectl create deployment nginx-a --image=nginx
+
+# 备份
+./ezctl backup k8s-01
+
+# 检查备份数据
+ls -l /etc/kubeasz/clusters/k8s-01/backup/
+
+# 删除测试Deployment
+kubectl delete deployments.apps nginx-a
+
+# 恢复
+./ezctl restore k8s-01
+
+# 检查恢复情况
+kubectl get deployments.apps
+```
