@@ -1694,7 +1694,7 @@ ping 10.200.36.67
 ### 6.1 如何删除集群
 
 ```bash
-# 清理集群
+## kubeasz如何重置集群
 # ezctl destroy <cluster>
 ezctl destroy k8s-01
 rm -rf /etc/kubeasz/clusters/k8s-01/
@@ -1702,8 +1702,7 @@ rm -rf /etc/kubeasz/clusters/k8s-01/
 # 移除kubeasz容器
 ./ezdown -C
 
-# 如需删除容器
-# 清理容器镜像
+# 如需删除容器并清理容器镜像
 docker system prune -a
 
 # 停止docker服务
@@ -1713,8 +1712,18 @@ systemctl stop docker
 umount /var/run/docker/netns/default
 umount /var/lib/docker/overlay
 rm -rf /var/lib/docker /var/run/docker
-
 # 重启节点，以确保清理残留的虚拟网卡、路由等信息
+
+## kubeadm如何重置集群
+kubeadm reset
+# master和node节点重置完成后
+# 清理iptables规则
+iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
+# 如使用了ipvs需清理ipvs规则
+ipvsadm --clear
+# 手工清理网络插件目录
+rm -rf /etc/cni/net.d
+# 重启各节点
 ```
 
 ### 6.2 如何备份与恢复集群
